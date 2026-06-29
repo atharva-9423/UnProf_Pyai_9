@@ -63,9 +63,6 @@ Uses a vocabulary & morphological analysis to find the **true base form** (lemma
 ## ⚡ Quick Start
 
 ```bash
-# 1. Clone / navigate to the project folder
-cd Task-9
-
 # 2. Install dependencies
 pip install flask nltk
 
@@ -83,12 +80,12 @@ python app.py
 ## 📁 Project Structure
 
 ```
-Task-9/
 ├── app.py              # Flask backend + NLP logic
 ├── templates/
 │   └── index.html      # Frontend UI (single-file, no dependencies)
 ├── requirements.txt
-└── README.md
+├── README.md
+└── download_nltk.py
 ```
 
 ---
