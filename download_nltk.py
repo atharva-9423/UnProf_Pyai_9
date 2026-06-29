@@ -8,7 +8,7 @@ os.makedirs(nltk_data_dir, exist_ok=True)
 print(f"Downloading NLTK data to {nltk_data_dir}...")
 
 # Download packages to the local directory
-packages = ["punkt", "punkt_tab", "stopwords", "wordnet", "averaged_perceptron_tagger_eng", "omw-1.4"]
+packages = ["punkt", "punkt_tab", "stopwords", "wordnet", "averaged_perceptron_tagger", "averaged_perceptron_tagger_eng", "omw-1.4"]
 for pkg in packages:
     nltk.download(pkg, download_dir=nltk_data_dir, quiet=False)
 
