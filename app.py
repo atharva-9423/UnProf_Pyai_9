@@ -15,18 +15,15 @@ import string
 from collections import Counter
 
 import os
-# ---------- Configure local NLTK data path ----------
 nltk_data_dir = os.path.join(os.path.dirname(__file__), 'nltk_data')
 nltk.data.path.append(nltk_data_dir)
 
 app = Flask(__name__)
 
-# ---------- NLP Tools ----------
 STOP_WORDS = set(stopwords.words("english"))
 STEMMER    = PorterStemmer()
 LEMMATIZER = WordNetLemmatizer()
 
-# ---------- Sample 500+ word article ----------
 SAMPLE_TEXT = """Artificial Intelligence and Natural Language Processing: Transforming the Way Computers Understand Human Language
 
 Artificial intelligence has fundamentally changed the way we interact with technology. At the heart of many modern AI systems lies Natural Language Processing, commonly referred to as NLP. NLP is a branch of artificial intelligence that enables computers to understand, interpret, and generate human language in a meaningful way. From virtual assistants like Siri and Alexa to powerful language models like ChatGPT, NLP powers some of the most transformative technologies of our time.
@@ -47,15 +44,12 @@ Today, NLP is applied across a wide range of industries. In healthcare, NLP syst
 
 
 def clean_and_tokenize(text: str):
-    """Lower-case, remove punctuation/numbers, then word-tokenize."""
     text_clean = re.sub(r"[^a-zA-Z\s]", " ", text)
     tokens = word_tokenize(text_clean.lower())
-    # Keep only alphabetic tokens of length > 1
     return [t for t in tokens if t.isalpha() and len(t) > 1]
 
 
 def get_pos_tag(word: str) -> str:
-    """Map NLTK POS tag to WordNet POS for accurate lemmatization."""
     from nltk import pos_tag as _pos_tag
     from nltk.corpus import wordnet
     tag = _pos_tag([word])[0][1][0].upper()
@@ -85,26 +79,20 @@ def analyze():
     if word_count < 100:
         return jsonify({"error": "Please provide at least 100 words for meaningful analysis."}), 400
 
-    # ── 1. Sentence & Word Tokenization ──────────────────────────────
     sentences   = sent_tokenize(text)
     word_tokens = clean_and_tokenize(text)
 
-    # ── 2. Stopword Removal ──────────────────────────────────────────
     clean_tokens = [w for w in word_tokens if w not in STOP_WORDS]
 
-    # ── 3. Stemming ──────────────────────────────────────────────────
     stemmed = [STEMMER.stem(w) for w in clean_tokens]
 
-    # ── 4. Lemmatization (POS-aware) ──────────────────────────────────
     lemmatized = [LEMMATIZER.lemmatize(w, get_pos_tag(w)) for w in clean_tokens]
 
-    # ── 5. Frequency Distribution ────────────────────────────────────
     freq_dist = FreqDist(lemmatized)
     top20     = freq_dist.most_common(20)
     top10_kw  = freq_dist.most_common(10)
     max_freq  = top20[0][1] if top20 else 1
 
-    # ── 6. Comparison table (first 20 cleaned words) ─────────────────
     n = min(20, len(clean_tokens))
     comparison = [
         {
@@ -115,10 +103,8 @@ def analyze():
         for i in range(n)
     ]
 
-    # ── 7. Unique tokens count ───────────────────────────────────────
     unique_lemmas = len(set(lemmatized))
 
-    # ── 8. Sentence length stats ─────────────────────────────────────
     sent_lengths = [len(s.split()) for s in sentences]
     avg_sent_len = round(sum(sent_lengths) / len(sent_lengths), 1) if sent_lengths else 0
 
