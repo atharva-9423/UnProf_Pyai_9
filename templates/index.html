@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NLP Text Analyzer</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;0,9..40,800;1,9..40,400&family=DM+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet" />
+
+  <style>
+    /* ═══════════════════════════════════════
+       DESIGN TOKENS — NEOBRUTALISM
+    ═══════════════════════════════════════ */
+    :root {
+      --ink: #0D0D0D;
+      --parchment: #F5F0E8;
+      --white: #FFFFFF;
+      --yellow: #FFE14D;
+      --yellow-dim: #F5D400;
+      --coral: #FF6B6B;
+      --teal: #4ECDC4;
+      --purple: #C77DFF;
+      --muted: #6B6B6B;
+      --border: 1.5px solid #0D0D0D;
+      --shadow: 6px 6px 0px #0D0D0D;
+      --shadow-sm: 3px 3px 0px #0D0D0D;
+      --radius: 16px;
+      --radius-sm: 10px;
+    }
+
+    /* ═══════════════════════════════════════
+       RESET & BASE
+    ═══════════════════════════════════════ */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background-color: var(--parchment);
+      color: var(--ink);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ═══════════════════════════════════════
+       CUSTOM SCROLLBAR
+    ═══════════════════════════════════════ */
+    ::-webkit-scrollbar {
+      width: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--ink);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--yellow);
+      border-radius: 0;
+      border: 2px solid var(--ink);
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--yellow-dim);
+    }
+
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: var(--yellow) var(--ink);
+    }
+
+    /* ═══════════════════════════════════════
+       HEADER
+    ═══════════════════════════════════════ */
+    .header {
+      background: var(--ink);
+      padding: 1.2rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header__tag {
+      display: inline-block;
+      background: var(--yellow);
+      color: var(--ink);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 0.3rem 0.9rem;
+      border-radius: 999px;
+      border: var(--border);
+      margin-bottom: 1rem;
+      letter-spacing: 0.04em;
+    }
+
+    .header__title {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--white);
+      letter-spacing: -0.04em;
+      line-height: 1;
+    }
+
+    .header__title span {
+      color: var(--yellow);
+    }
+
+    .header__sub {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      color: #666;
+      letter-spacing: 0.03em;
+    }
+
+    /* ═══════════════════════════════════════
+       SPLIT-PANE LAYOUT
+    ═══════════════════════════════════════ */
+    .app-layout {
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .left-panel {
+      background: var(--parchment);
+      border-right: var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 2rem 1.8rem;
+    }
+
+    .right-panel {
+      background: #EFEAD9;
+      overflow-y: auto;
+      padding: 2rem 2rem;
+    }
+
+    /* placeholder when no results yet */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      gap: 1rem;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .empty-state__icon {
+      font-size: 4rem;
+      opacity: 0.25;
+    }
+
+    .empty-state__text {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.85rem;
+      letter-spacing: 0.04em;
+      opacity: 0.5;
+    }
+
+    /* ═══════════════════════════════════════
+       INPUT SECTION
+    ═══════════════════════════════════════ */
+    .input-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .input-label {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.6rem;
+      display: block;
+    }
+
+    .textarea-wrap {
+      background: var(--white);
+      border: var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      transition: box-shadow 0.15s;
+    }
+
+    .textarea-wrap:focus-within {
+      box-shadow: var(--shadow);
+    }
+
+    #text-input {
+      width: 100%;
+      flex: 1;
+      min-height: 260px;
+      padding: 1.5rem;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 1rem;
+      color: var(--ink);
+      background: transparent;
+      border: none;
+      outline: none;
+      resize: none;
+      line-height: 1.7;
+      scrollbar-width: none;
+      /* Firefox */
+    }
+
+    #text-input::-webkit-scrollbar {
+      display: none;
+      /* WebKit */
+    }
+
+    #text-input::placeholder {
+      color: #BBB;
+    }
+
+    .textarea-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.6rem 1.5rem;
+      border-top: 1px solid #E8E8E8;
+      background: #FAFAFA;
+    }
+
+    .word-count {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    /* ═══════════════════════════════════════
+       BUTTONS
+    ═══════════════════════════════════════ */
+    .btn-row {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.95rem 1.8rem;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      border: var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      transition: box-shadow 0.12s, transform 0.12s;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      box-shadow: var(--shadow-sm);
+      transform: translate(3px, 3px);
+    }
+
+    .btn:active {
+      box-shadow: 1px 1px 0 var(--ink);
+      transform: translate(5px, 5px);
+    }
+
+    .btn--primary {
+      background: var(--yellow);
+      color: var(--ink);
+      flex: 1;
+      justify-content: center;
+      font-size: 1.05rem;
+    }
+
+    .btn--ghost {
+      background: var(--white);
+      color: var(--ink);
+    }
+
+    .btn--clear {
+      background: var(--parchment);
+      color: var(--muted);
+      box-shadow: var(--shadow-sm);
+      border: var(--border);
+    }
+
+    /* ═══════════════════════════════════════
+       LOADING STATE
+    ═══════════════════════════════════════ */
+    .loader {
+      display: none;
+      text-align: center;
+      padding: 2rem;
+    }
+
+    .loader.active {
+      display: block;
+    }
+
+    .loader__dots {
+      display: inline-flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .loader__dot {
+      width: 14px;
+      height: 14px;
+      background: var(--ink);
+      border-radius: 50%;
+      animation: bounce 0.8s infinite;
+    }
+
+    .loader__dot:nth-child(2) {
+      animation-delay: 0.15s;
+    }
+
+    .loader__dot:nth-child(3) {
+      animation-delay: 0.3s;
+    }
+
+    @keyframes bounce {
+
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+
+      50% {
+        transform: translateY(-10px);
+      }
+    }
+
+    .loader__text {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    /* ═══════════════════════════════════════
+       ERROR
+    ═══════════════════════════════════════ */
+    .error-box {
+      display: none;
+      background: #FFF0F0;
+      border: var(--border);
+      border-color: var(--coral);
+      border-radius: var(--radius-sm);
+      padding: 1rem 1.4rem;
+      color: var(--coral);
+      font-weight: 600;
+      box-shadow: var(--shadow-sm);
+      margin-top: 1rem;
+    }
+
+    .error-box.active {
+      display: block;
+    }
+
+    /* ═══════════════════════════════════════
+       RESULTS
+    ═══════════════════════════════════════ */
+    #results {
+      display: none;
+      animation: fadeUp 0.35s ease;
+    }
+
+    #results.active {
+      display: block;
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .section-title {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 1rem;
+    }
+
+    /* ═══════════════════════════════════════
+       STAT CARDS
+    ═══════════════════════════════════════ */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .stat-card {
+      background: var(--white);
+      border: var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 1rem 0.75rem;
+      text-align: center;
+      transition: box-shadow 0.12s, transform 0.12s;
+      cursor: pointer;
+    }
+
+    .stat-card:hover {
+      box-shadow: var(--shadow-sm);
+      transform: translate(3px, 3px);
+    }
+
+    .stat-card--yellow {
+      background: var(--yellow);
+    }
+
+    .stat-card--teal {
+      background: var(--teal);
+    }
+
+    .stat-card--coral {
+      background: var(--coral);
+    }
+
+    .stat-card__number {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--ink);
+      line-height: 1;
+      margin-bottom: 0.3rem;
+    }
+
+    .stat-card__label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.68rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--ink);
+      opacity: 0.7;
+    }
+
+    /* ═══════════════════════════════════════
+       CARDS
+    ═══════════════════════════════════════ */
+    .card {
+      background: var(--white);
+      border: var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 1.4rem 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .card__title {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 700;
+      font-size: 1.1rem;
+      margin-bottom: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .card__title .badge {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      font-weight: 500;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      border: 1px solid var(--ink);
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    /* ═══════════════════════════════════════
+       TOKEN PILLS
+    ═══════════════════════════════════════ */
+    .token-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .token-pill {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem;
+      padding: 0.35rem 0.75rem;
+      border: 1px solid var(--ink);
+      border-radius: 999px;
+      background: var(--parchment);
+      opacity: 0;
+      transform: scale(0.8);
+      transition: opacity 0.2s, transform 0.2s;
+    }
+
+    .token-pill.visible {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .token-pill--clean {
+      background: #E8FBF9;
+      border-color: var(--teal);
+      color: #1A7A74;
+    }
+
+    /* ═══════════════════════════════════════
+       COMPARISON TABLE
+    ═══════════════════════════════════════ */
+    .compare-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.82rem;
+    }
+
+    .compare-table th {
+      background: var(--ink);
+      color: var(--white);
+      padding: 0.7rem 1rem;
+      text-align: left;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    .compare-table th:first-child {
+      border-radius: 8px 0 0 0;
+    }
+
+    .compare-table th:last-child {
+      border-radius: 0 8px 0 0;
+    }
+
+    .compare-table td {
+      padding: 0.65rem 1rem;
+      border-bottom: 1px solid #F0F0F0;
+      color: var(--ink);
+    }
+
+    .compare-table tr:nth-child(even) td {
+      background: #FAFAFA;
+    }
+
+    .compare-table td.stemmed {
+      color: #B05A0A;
+    }
+
+    .compare-table td.lemmatized {
+      color: #1A7A74;
+    }
+
+    /* ═══════════════════════════════════════
+       KEYWORD BARS — Signature element
+    ═══════════════════════════════════════ */
+    .keyword-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .keyword-item {
+      display: grid;
+      grid-template-columns: 140px 1fr 40px;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .keyword-item__word {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--ink);
+    }
+
+    .keyword-item__bar-wrap {
+      height: 28px;
+      background: #F0EDE6;
+      border-radius: 6px;
+      border: 1px solid var(--ink);
+      overflow: hidden;
+    }
+
+    .keyword-item__bar {
+      height: 100%;
+      background: var(--yellow);
+      border-radius: 4px;
+      width: 0%;
+      transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .keyword-item:nth-child(1) .keyword-item__bar {
+      background: var(--yellow);
+    }
+
+    .keyword-item:nth-child(2) .keyword-item__bar {
+      background: #FFD166;
+    }
+
+    .keyword-item:nth-child(3) .keyword-item__bar {
+      background: var(--teal);
+    }
+
+    .keyword-item:nth-child(4) .keyword-item__bar {
+      background: #74C4BE;
+    }
+
+    .keyword-item:nth-child(5) .keyword-item__bar {
+      background: var(--coral);
+    }
+
+    .keyword-item:nth-child(6) .keyword-item__bar {
+      background: #FF9999;
+    }
+
+    .keyword-item:nth-child(7) .keyword-item__bar {
+      background: var(--purple);
+    }
+
+    .keyword-item:nth-child(8) .keyword-item__bar {
+      background: #D9A8FF;
+    }
+
+    .keyword-item:nth-child(9) .keyword-item__bar {
+      background: #A8D8A8;
+    }
+
+    .keyword-item:nth-child(10) .keyword-item__bar {
+      background: #FFB347;
+    }
+
+    .keyword-item__freq {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--muted);
+      text-align: right;
+    }
+
+    /* ═══════════════════════════════════════
+       WORD CLOUD GRID
+    ═══════════════════════════════════════ */
+    .word-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+    }
+
+    .word-chip {
+      font-family: 'DM Mono', monospace;
+      font-weight: 500;
+      padding: 0.4rem 0.9rem;
+      border: 1px solid var(--ink);
+      border-radius: 999px;
+      background: var(--white);
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.3s, transform 0.3s, background 0.2s;
+    }
+
+    .word-chip.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .word-chip:hover {
+      background: var(--yellow);
+      cursor: default;
+    }
+
+    /* ═══════════════════════════════════════
+       MODAL OVERLAY
+    ═══════════════════════════════════════ */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(13, 13, 13, 0.6);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-content {
+      background: var(--parchment);
+      border: var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      width: 90%;
+      max-width: 800px;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      transform: translateY(20px) scale(0.95);
+      transition: transform 0.25s ease;
+    }
+
+    .modal-overlay.active .modal-content {
+      transform: translateY(0) scale(1);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.5rem 2rem;
+      border-bottom: var(--border);
+      background: var(--white);
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+
+    .modal-title {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 800;
+      font-size: 1.4rem;
+      letter-spacing: -0.02em;
+    }
+
+    .modal-close {
+      background: transparent;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: var(--ink);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-body {
+      padding: 2rem;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .sentence-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .sentence-item {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 1rem;
+      line-height: 1.6;
+      padding: 1rem;
+      background: var(--white);
+      border: var(--border);
+      border-radius: var(--radius-sm);
+    }
+
+    /* ═══════════════════════════════════════
+       RESPONSIVE
+    ═══════════════════════════════════════ */
+    @media (max-width: 900px) {
+      body {
+        height: auto;
+        overflow-y: auto;
+        display: block;
+      }
+
+      .app-layout {
+        grid-template-columns: 1fr;
+        height: auto;
+        overflow: visible;
+        display: block;
+      }
+
+      .left-panel,
+      .right-panel {
+        overflow: visible;
+        height: auto;
+      }
+    }
+
+    @media (max-width: 700px) {
+      .stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .two-col {
+        grid-template-columns: 1fr;
+      }
+
+      .keyword-item {
+        grid-template-columns: 100px 1fr 36px;
+      }
+
+      .btn {
+        padding: 0.85rem 1.2rem;
+        font-size: 0.95rem;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .stats-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ── HEADER ── -->
+  <header class="header">
+    <div>
+      <h1 class="header__title">NLP Text <span>Analyzer</span></h1>
+      <p class="header__sub">tokenize &middot; stopwords &middot; stem &middot; lemmatize &middot; keywords</p>
+    </div>
+    <div
+      style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--ink);letter-spacing:0.04em;background:var(--white);padding:0.4rem 0.8rem;border:1px solid var(--ink);border-radius:999px;box-shadow:2px 2px 0px var(--ink);font-weight:500;">
+      Built by <span style="font-weight:700;color:var(--teal);">Atharva</span></div>
+  </header>
+
+
+  <!-- ── SPLIT LAYOUT ── -->
+  <div class="app-layout">
+
+    <!-- LEFT: Input Panel -->
+    <div class="left-panel">
+      <section class="input-section">
+        <label class="input-label" for="text-input">Paste your text below</label>
+
+        <div class="textarea-wrap" style="flex:1;display:flex;flex-direction:column;">
+          <textarea id="text-input"
+            placeholder="Paste a 500+ word article here &mdash; about AI, technology, science, or any topic. The analyzer will tokenize, clean, stem, lemmatize, and extract keywords..."></textarea>
+          <div class="textarea-footer">
+            <span class="word-count" id="word-count">0 words</span>
+            <span style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#BBB;">min. 50 words</span>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn--primary" id="analyze-btn" onclick="analyze()">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+              stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.35-4.35" />
+            </svg>
+            Analyze Text
+          </button>
+          <button class="btn btn--ghost" onclick="loadSample()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14,2 14,8 20,8" />
+            </svg>
+            Sample
+          </button>
+          <button class="btn btn--clear" onclick="clearAll()">Clear</button>
+        </div>
+
+        <div class="error-box" id="error-box"></div>
+      </section>
+    </div>
+
+    <!-- RIGHT: Results Panel -->
+    <div class="right-panel">
+
+      <!-- Loader -->
+      <div class="loader" id="loader">
+        <div class="loader__dots">
+          <div class="loader__dot"></div>
+          <div class="loader__dot"></div>
+          <div class="loader__dot"></div>
+        </div>
+        <p class="loader__text">Analyzing text...</p>
+      </div>
+
+      <!-- Empty state -->
+      <div class="empty-state" id="empty-state">
+        <div class="empty-state__icon">🔍</div>
+        <p class="empty-state__text">Results will appear here<br>after you analyze text</p>
+      </div>
+
+      <!-- Results -->
+      <section id="results">
+
+        <!-- Stats -->
+        <p class="section-title">Overview</p>
+        <div class="stats-grid">
+          <div class="stat-card stat-card--yellow"
+            onclick="openModal('Word Tokens', window.latestData.full_word_tokens, 'pill')">
+            <div class="stat-card__number" id="s-tokens">&mdash;</div>
+            <div class="stat-card__label">Word Tokens</div>
+          </div>
+          <div class="stat-card" onclick="openModal('Sentences', window.latestData.full_sentences, 'sentence')">
+            <div class="stat-card__number" id="s-sentences">&mdash;</div>
+            <div class="stat-card__label">Sentences</div>
+          </div>
+          <div class="stat-card stat-card--teal"
+            onclick="openModal('Clean Tokens', window.latestData.full_clean_tokens, 'pill', 'token-pill--clean')">
+            <div class="stat-card__number" id="s-clean">&mdash;</div>
+            <div class="stat-card__label">Clean Tokens</div>
+          </div>
+          <div class="stat-card stat-card--coral"
+            onclick="openModal('Stopwords Removed', window.latestData.removed_stopwords, 'pill')">
+            <div class="stat-card__number" id="s-removed">&mdash;</div>
+            <div class="stat-card__label">Stopwords Out</div>
+          </div>
+          <div class="stat-card" style="cursor: default;">
+            <div class="stat-card__number" id="s-chars">&mdash;</div>
+            <div class="stat-card__label">Characters</div>
+          </div>
+        </div>
+
+        <!-- Token Preview -->
+        <div class="two-col">
+          <div class="card">
+            <div class="card__title">
+              Tokenization
+              <span class="badge" style="background:#FFF7CC;">Step 1</span>
+            </div>
+            <p class="section-title">First 24 word tokens</p>
+            <div class="token-list" id="token-preview"></div>
+          </div>
+
+          <div class="card">
+            <div class="card__title">
+              After Stopword Removal
+              <span class="badge" style="background:#E8FBF9;border-color:var(--teal);color:#1A7A74;">Step 2</span>
+            </div>
+            <p class="section-title">First 24 clean tokens</p>
+            <div class="token-list" id="clean-preview"></div>
+          </div>
+        </div>
+
+        <!-- Stemming vs Lemmatization -->
+        <div class="card">
+          <div class="card__title">
+            Stemming vs Lemmatization
+            <span class="badge" style="background:#FFF0F0;border-color:var(--coral);color:var(--coral);">Step 3 &amp;
+              4</span>
+          </div>
+          <p class="section-title" style="margin-bottom:0.8rem;">First 15 words compared &mdash; lemmatization gives
+            real words, stemming is rougher</p>
+          <div style="overflow-x:auto;">
+            <table class="compare-table">
+              <thead>
+                <tr>
+                  <th>Original</th>
+                  <th>Stemmed</th>
+                  <th>Lemmatized</th>
+                </tr>
+              </thead>
+              <tbody id="compare-table"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Keywords + Word Grid -->
+        <div class="two-col">
+          <div class="card">
+            <div class="card__title">
+              Top Keywords
+              <span class="badge" style="background:var(--yellow);">By Frequency</span>
+            </div>
+            <p class="section-title">Most important words after lemmatization</p>
+            <div class="keyword-list" id="keyword-list"></div>
+          </div>
+
+          <div class="card">
+            <div class="card__title">
+              Top 20 Frequent Words
+            </div>
+            <p class="section-title">Hover over a word to highlight it</p>
+            <div class="word-grid" id="word-grid"></div>
+          </div>
+        </div>
+
+      </section>
+    </div><!-- end right-panel -->
+  </div><!-- end app-layout -->
+
+  <!-- Modal Overlay -->
+  <div class="modal-overlay" id="list-modal" onclick="if(event.target===this) closeModal()">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title" id="modal-title">List</h2>
+        <button class="modal-close" onclick="closeModal()">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+            stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body" id="modal-body">
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const textInput = document.getElementById('text-input');
+    const wordCount = document.getElementById('word-count');
+
+    // ── Word Counter ─────────────────────────────────────────
+    textInput.addEventListener('input', () => {
+      const words = textInput.value.trim().split(/\s+/).filter(w => w).length;
+      wordCount.textContent = `${words} word${words !== 1 ? 's' : ''}`;
+    });
+
+    // ── Load Sample ──────────────────────────────────────────
+    async function loadSample() {
+      try {
+        const res = await fetch('/sample');
+        const data = await res.json();
+        textInput.value = data.text;
+        textInput.dispatchEvent(new Event('input'));
+      } catch {
+        textInput.value = "Failed to load sample. Please paste your own text.";
+      }
+    }
+
+    // ── Clear ────────────────────────────────────────────────
+    function clearAll() {
+      textInput.value = '';
+      wordCount.textContent = '0 words';
+      document.getElementById('results').classList.remove('active');
+      document.getElementById('error-box').classList.remove('active');
+    }
+
+    // ── Analyze ──────────────────────────────────────────────
+    async function analyze() {
+      const text = textInput.value.trim();
+      const errBox = document.getElementById('error-box');
+      const loader = document.getElementById('loader');
+      const results = document.getElementById('results');
+
+      errBox.classList.remove('active');
+      results.classList.remove('active');
+      loader.classList.add('active');
+      document.getElementById('analyze-btn').disabled = true;
+
+      try {
+        const res = await fetch('/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || 'Analysis failed.');
+        }
+
+        // Store data globally for modal clicks
+        window.latestData = data;
+        renderResults(data);
+        results.classList.add('active');
+        document.getElementById('empty-state').style.display = 'none';
+
+      } catch (err) {
+        errBox.textContent = '⚠️  ' + err.message;
+        errBox.classList.add('active');
+      } finally {
+        loader.classList.remove('active');
+        document.getElementById('analyze-btn').disabled = false;
+      }
+    }
+
+    // ── Render Results ───────────────────────────────────────
+    function renderResults(data) {
+      const { stats, token_preview, clean_preview, comparison, keywords, frequent_words } = data;
+
+      // Stats
+      animateNumber('s-tokens', stats.total_tokens);
+      animateNumber('s-sentences', stats.total_sentences);
+      animateNumber('s-clean', stats.clean_tokens);
+      animateNumber('s-removed', stats.stopwords_removed);
+      document.getElementById('s-chars').textContent = stats.total_chars.toLocaleString();
+
+      // Token Pills
+      renderPills('token-preview', token_preview, '');
+      renderPills('clean-preview', clean_preview, 'token-pill--clean');
+
+      // Comparison Table
+      const tbody = document.getElementById('compare-table');
+      tbody.innerHTML = comparison.map(row => `
+        <tr>
+          <td>${row.original}</td>
+          <td class="stemmed">${row.stemmed}</td>
+          <td class="lemmatized">${row.lemmatized}</td>
+        </tr>
+      `).join('');
+
+      // Keywords — animated bars (signature element)
+      const kwList = document.getElementById('keyword-list');
+      kwList.innerHTML = keywords.map(kw => `
+        <div class="keyword-item">
+          <span class="keyword-item__word">${kw.word}</span>
+          <div class="keyword-item__bar-wrap">
+            <div class="keyword-item__bar" data-pct="${kw.pct}"></div>
+          </div>
+          <span class="keyword-item__freq">${kw.frequency}</span>
+        </div>
+      `).join('');
+
+      // Animate bars with stagger
+      setTimeout(() => {
+        document.querySelectorAll('.keyword-item__bar').forEach((bar, i) => {
+          setTimeout(() => {
+            bar.style.width = bar.dataset.pct + '%';
+          }, i * 80);
+        });
+      }, 100);
+
+      // Word Grid
+      const sizes = [1.1, 1.0, 0.95, 0.9, 0.85, 0.82, 0.8, 0.78, 0.76, 0.75];
+      const grid = document.getElementById('word-grid');
+      grid.innerHTML = frequent_words.map((w, i) => `
+        <span class="word-chip" style="font-size:${(sizes[i] || 0.74)}rem;" data-index="${i}">
+          ${w.word} <span style="color:var(--muted);font-size:0.7em;">${w.frequency}</span>
+        </span>
+      `).join('');
+
+      // Stagger word chips into view
+      setTimeout(() => {
+        document.querySelectorAll('.word-chip').forEach((chip, i) => {
+          setTimeout(() => chip.classList.add('visible'), i * 50);
+        });
+      }, 150);
+    }
+
+    // ── Modal Handlers ───────────────────────────────────────
+    function openModal(title, items, renderType, extraClass = '') {
+      if (!items || items.length === 0) return;
+      document.getElementById('modal-title').textContent = title + ` (${items.length})`;
+      const modalBody = document.getElementById('modal-body');
+
+      if (renderType === 'pill') {
+        modalBody.innerHTML = `<div class="token-list" style="margin-bottom: 2rem;">` +
+          items.map(w => `<span class="token-pill visible ${extraClass}" style="opacity:1; transform:scale(1); margin-bottom: 0.5rem;">${w}</span>`).join('') +
+          `</div>`;
+      } else if (renderType === 'sentence') {
+        modalBody.innerHTML = `<div class="sentence-list">` +
+          items.map(s => `<div class="sentence-item">${s}</div>`).join('') +
+          `</div>`;
+      }
+
+      document.getElementById('list-modal').classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('list-modal').classList.remove('active');
+    }
+
+    // ── Helpers ──────────────────────────────────────────────
+    function renderPills(containerId, words, extraClass) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = words.map((w, i) =>
+        `<span class="token-pill ${extraClass}" data-index="${i}">${w}</span>`
+      ).join('');
+      setTimeout(() => {
+        container.querySelectorAll('.token-pill').forEach((pill, i) => {
+          setTimeout(() => pill.classList.add('visible'), i * 30);
+        });
+      }, 50);
+    }
+
+    function animateNumber(id, target) {
+      const el = document.getElementById(id);
+      const start = 0;
+      const dur = 600;
+      const step = (target / dur) * 16;
+      let current = start;
+      const timer = setInterval(() => {
+        current = Math.min(current + step, target);
+        el.textContent = Math.round(current).toLocaleString();
+        if (current >= target) clearInterval(timer);
+      }, 16);
+    }
+  </script>
+
+</body>
+
+</html>
